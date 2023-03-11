@@ -1,0 +1,197 @@
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.2.2/chartjs-plugin-annotation.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+  #map {
+    position: absolute;
+    right: 0;
+    width: 600;
+    height: 400px;
+  }
+    #chart-container {
+      height: 600px;
+      width: 1200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Weather Forecast</h1>
+  <div id="map"></div>
+  <div id="chart-container">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <script>
+    // Check if geolocation is supported
+    if (navigator.geolocation) {
+      // Get current position
+      navigator.geolocation.getCurrentPosition(function(position) {
+        // Get latitude and longitude
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+
+        // Build API url with parameters
+        var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&hourly=temperature_2m,rain,windspeed_10m&timezone=Europe%2FBerlin";
+
+        // Make AJAX request to get JSON data
+        $.ajax({
+          url: url,
+          type: "GET",
+          dataType: "json",
+          success: function(data) {
+            // Extract data arrays from JSON object
+            var time = data.hourly.time.map(function(t) {
+              return new Date(t).toLocaleString("hu-HU");
+            });
+            var temp = data.hourly.temperature_2m;
+            var rain = data.hourly.rain;
+            var wind = data.hourly.windspeed_10m;
+
+            // Get current time index from data array
+            var currentTimeIndex = data.hourly.time.indexOf(new Date().toISOString());
+
+            // Create chart with Chart.js library
+            var ctx = document.getElementById("chart").getContext("2d");
+            var chart = new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: time,
+                datasets: [
+                  {
+                    label: "Temperature (°C)",
+                    data: temp,
+                    borderColor: "red",
+                    yAxisID: "y1",
+                    pointStyle:function(context){
+                       return context.dataIndex===currentTimeIndex?"cross":"circle";
+                     },
+                     radius:function(context){
+                       return context.dataIndex===currentTimeIndex?8 :3;
+                     }
+                  },
+                  {
+                     type: "bar",
+                    label:"Rain (mm)",
+                     data :rain,
+                     borderColor:"blue",
+                     yAxisID:"y2",
+                     pointStyle:function(context){
+                       return context.dataIndex===currentTimeIndex?"cross":"circle";
+                     },
+                     radius:function(context){
+                       return context.dataIndex===currentTimeIndex?8 :3;
+                     }
+                  },
+                  {
+                    label:"Wind speed (m/s)",
+                     data :wind,
+                     borderColor:"green",
+                     yAxisID:"y3",
+                     pointStyle:function(context){
+                       return context.dataIndex===currentTimeIndex?"cross":"circle";
+                     },
+                     radius:function(context){
+                       return context.dataIndex===currentTimeIndex?8 :3;
+                     }
+                  }
+                ]
+              },
+              options: {
+                scales: {
+                  y1: {
+                    type: "linear",
+                    position: "left",
+                    title: {
+                      display: true,
+                      text: "Temperature (°C)"
+                    }
+                  },
+                  y2: {
+                    type: "linear",
+                    position: "right",
+                    title: {
+                      display: true,
+                      text: "Rain (mm)"
+                    }
+                  },
+                  y3: {
+                    type:"linear",
+                    position:"right",
+                    title:{
+                      display:true,
+                      text:"Wind speed (m/s)"
+                     }
+                   }
+                 },
+                 annotation:{
+                   annotations:[{
+                     type:"line",
+                     scaleID:"x",
+                     value :currentTimeIndex,
+                     borderColor:"black",
+                     borderWidth :2
+                   }]
+                 }
+               }
+             });
+
+             // Create map with Leaflet library
+             var map = L.map("map").setView([lat, lon], 13);
+             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+               attribution:
+                 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+                 tms: true,
+               maxZoom: 18
+             }).addTo(map);
+             L.marker([lat, lon]).addTo(map).bindPopup("You are here").openPopup();
+           },
+
+
+
+           error:function(){
+             // Handle errors
+             alert("Something went wrong. Please try again later.");
+           }
+         });
+       });
+     } else {
+       // Geolocation is not supported
+       alert("Geolocation is not supported by your browser.");
+     }
+
+     
+
+  </script>
+
+
+    <script>
+        var map = L.map('map').setView([51.505, -0.09], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 18,
+        }).addTo(map);
+
+        function showPosition(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            map.setView([lat, lon], 13);
+            L.marker([lat, lon]).addTo(map);
+        }
+
+        $(document).ready(function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+    </script>
+
+</body>
+</html>
